@@ -23,7 +23,7 @@ export function Hero() {
         <div className={styles.content} style={{ opacity: contentOpacity }}>
           <h1 className={styles.title}>Science shouldn't need permission</h1>
           <p className={styles.subtitle}>
-            The first platform where inventors fund, protect, and distribute breakthrough technology — without gatekeepers.
+            A platform where inventors can seek support, document their work, and share breakthrough technology — in public.
           </p>
           <div className={styles.buttons}>
             <a href={demoUrl('btn-hero-scientist-01')} className={styles.btnSecondary}>

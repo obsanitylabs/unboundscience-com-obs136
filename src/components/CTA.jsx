@@ -1,3 +1,4 @@
+import { demoUrl } from '../demoUrl'
 import styles from './CTA.module.css'
 
 export function CTA() {
@@ -9,7 +10,7 @@ export function CTA() {
         <p className={styles.subtitle}>
           Join the movement to create an uncensorable repository of human knowledge.
         </p>
-        <a href="https://demo.unboundscience.io" className={styles.btn}>
+        <a href={demoUrl('btn-cta-01')} className={styles.btn}>
           Get Started
         </a>
         <div className={styles.socialLinks}>

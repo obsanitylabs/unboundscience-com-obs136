@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { useScrollVideo } from '../hooks/useScrollVideo'
+import { demoUrl } from '../demoUrl'
 import styles from './Hero.module.css'
 
 export function Hero() {
@@ -25,10 +26,10 @@ export function Hero() {
             The first platform where inventors fund, protect, and distribute breakthrough technology — without gatekeepers.
           </p>
           <div className={styles.buttons}>
-            <a href="https://demo.unboundscience.io" className={styles.btnSecondary}>
+            <a href={demoUrl('btn-hero-scientist-01')} className={styles.btnSecondary}>
               I'm a Scientist
             </a>
-            <a href="https://demo.unboundscience.io" className={styles.btnPrimary}>
+            <a href={demoUrl('btn-hero-donor-01')} className={styles.btnPrimary}>
               I'm a Donor
             </a>
           </div>

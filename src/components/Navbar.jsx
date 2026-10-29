@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { demoUrl } from '../demoUrl'
 import styles from './Navbar.module.css'
 
 const LOGO_SRC = `${import.meta.env.BASE_URL || '/'}logo.png`
@@ -30,7 +31,7 @@ export function Navbar() {
           <a href="#how">How it Works</a>
           <a href="#focus">Areas</a>
           <a href="#stats">Community</a>
-          <a href="https://demo.unboundscience.io" className={styles.cta}>
+          <a href={demoUrl('btn-launch-01')} className={styles.cta}>
             Launch App
           </a>
         </div>
@@ -59,7 +60,7 @@ export function Navbar() {
         <a href="#how" onClick={closeMobileMenu}>How it Works</a>
         <a href="#focus" onClick={closeMobileMenu}>Areas</a>
         <a href="#stats" onClick={closeMobileMenu}>Community</a>
-        <a href="https://demo.unboundscience.io" className={styles.cta}>
+        <a href={demoUrl('btn-launch-02')} onClick={closeMobileMenu} className={styles.cta}>
           Launch App
         </a>
       </div>

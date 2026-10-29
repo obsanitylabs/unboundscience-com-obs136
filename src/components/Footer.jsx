@@ -1,3 +1,4 @@
+import { demoUrl } from '../demoUrl'
 import styles from './Footer.module.css'
 
 const LOGO_SRC = `${import.meta.env.BASE_URL || '/'}logo.png`
@@ -12,7 +13,7 @@ export function Footer() {
         <div className={styles.links}>
           <a href="#problem">Mission</a>
           <a href="#how">Team</a>
-          <a href="https://demo.unboundscience.io">Demo</a>
+          <a href={demoUrl('lnk-footer-demo-01')}>Demo</a>
           <a href="https://twitter.com/unboundscience" target="_blank" rel="noopener noreferrer">
             Twitter
           </a>

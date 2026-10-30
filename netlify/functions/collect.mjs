@@ -1,6 +1,7 @@
 // OBS-125 — Netlify-native collector (same-origin, per-site). Replaces the VPS collector proxy.
-// Enforces R1 (allowlist, query-strip, host-only referrer), R2 (consent fail-closed → 451),
-// R3 (IP truncation before persistence, log redaction), R6 (bot filter — counted, never stored).
+// Enforces R1 (allowlist, query-strip, host-only referrer), R3 (IP truncation before
+// persistence, log redaction), R6 (bot filter — counted, never stored).
+// OBS-169: default-on aggregate collection — no consent gate (R2 consent check removed).
 // Storage: Netlify Blobs (same provider as the site — Netlify, Inc. is the sole processor; see
 // docs/COMPLIANCE-DELTA.md and public/analytics-notice.html).
 // Deployed at POST /api/collect on each site's own domain.
@@ -23,12 +24,6 @@ export default async (req) => {
   let parsed;
   try { parsed = JSON.parse(await req.text()); } catch { return new Response(JSON.stringify({ error: 'bad-json' }), { status: 400, headers: JSON_HEADERS }); }
   const events = parsed.events;
-
-  // R2 — consent fail-closed (defense-in-depth; the first-party SDK gates before any send).
-  // sendBeacon cannot set headers, so the consent grant may arrive as a body flag or a header.
-  if (req.headers.get('x-obs-consent') !== 'granted' && parsed.consent !== 'granted') {
-    return new Response(JSON.stringify({ error: 'consent-required' }), { status: 451, headers: JSON_HEADERS });
-  }
 
   // R3 — truncate at the earliest hop; never log or persist the full IP.
   const rawIp = req.headers.get('x-nf-client-connection-ip') || '';

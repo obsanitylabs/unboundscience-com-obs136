@@ -10,7 +10,7 @@ CISO/GC re-confirmation before tracking fires.
 | Req | Approved design | Netlify-native design | Delta |
 |---|---|---|---|
 | R1 | Allowlist proxy before PostHog; query-strip; host-only referrer | Same `validateBatch` in `collect.mjs` before Blobs write | none |
-| R2 | Consent gate SDK + proxy `x-obs-consent` check | Same SDK (same-origin) + function 451 fail-closed | none |
+| R2 | Consent gate SDK + proxy `x-obs-consent` check | Same SDK (same-origin) + function 451 fail-closed | **Removed per OBS-169** — default-on aggregate collection, no consent gate |
 | R3 | IP truncation at proxy, log redaction | `truncateIp` in `collect.mjs` before any use; `redactLogs` on function logs | none |
 | R4 | ≤90d retention + backup rotation + restore cutoff | Scheduled purge deletes >90d day-partitions | **No raw-event backups** (Blobs is Netlify-managed; no secondary PII copy). Aggregates exportable from `/api/insights`. |
 | R5 | No outbound telemetry / no third-party CDNs | Netlify static+functions only; no third-party scripts | none |

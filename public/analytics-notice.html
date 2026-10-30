@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- OBS-125 / OBS-156 — GC-approved product analytics notice (approved text, 2026-10-30).
+     Controller fields confirmed by the board on 2026-10-30 (entity placeholder: Obsanity Labs,
+     contact contact@obsanity.net, Art. 27 not required, Netlify DPA confirmed in effect).
+     Do not remove the transfers or processor sections. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Product analytics notice</title>
+<style>
+  body { font: 16px/1.65 system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px 20px 80px; color: #1a1a1a; background: #fff; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.1rem; margin-top: 1.8em; }
+  a { color: #06c; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; word-break: break-all; }
+  button { background: #2e7d32; color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; margin-top: 8px; }
+  .warn { background: #fff3cd; border: 1px solid #d39e00; padding: 10px 14px; border-radius: 6px; font-size: 0.85em; }
+  #obs-consent-state { margin-top: 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Product analytics notice</h1>
+
+<!-- PENDING BOARD CONFIRMATION (publish condition, GC OBS-156 condition 3):
+     legal entity, jurisdiction, privacy contact, Article 27 representative.
+     The page below carries these as visibly marked fields until they are filled. -->
+<p><strong id="legal-entity">Obsanity Labs</strong> ("we") is the interim controller for
+product analytics on this website (<span id="site-host">this site</span>). Placeholder controller
+confirmed by the board on 2026-10-30: each product will have its own legal entity once spun out,
+and this notice will be updated with the product entity and its jurisdiction at that time.
+Contact: <span id="privacy-contact">contact@obsanity.net</span>.
+<strong>EU/UK representative (GDPR Art. 27):</strong> <span id="eu-rep">Not required (confirmed by
+the board, 2026-10-30).</span></p>
+
+<h2>What we collect</h2>
+<p>If you opt in, we store on your device a random identifier (<code>anonymous_id</code>) and a
+session identifier, and we send: pages you view (path only; query strings are removed), the
+referring site's host (not the full URL), first-touch campaign parameters you arrived with, and
+your consent state. We also record product-use events from a fixed list (for example feature
+use, experiment runs, and share actions). On phreaking.fun only, we may record whether a wallet
+is connected (yes or no), the wallet type you chose, and the integer chain id. We do not collect
+wallet addresses, transaction hashes, ENS names, email addresses, names, or free-text messages.
+A truncated IP address is used for a few seconds to filter bots and is not stored. This
+information is pseudonymous personal data, not anonymous data.</p>
+
+<h2>Why</h2>
+<p>Product analytics and aggregated traction reporting only. We do not use it for advertising,
+sale, cross-context sharing, or enrichment.</p>
+
+<h2>Legal basis</h2>
+<p>For visitors in the EU, EEA, UK, and Switzerland: your consent (GDPR Art. 6(1)(a), and the
+ePrivacy rules on storage on your device). Nothing is stored or sent for analytics before you
+opt in. You can withdraw consent as easily as you gave it, from the consent settings on this
+page below. Withdrawal stops new collection immediately. For other visitors: we collect this
+only as described in this notice, and you can opt out by the same control. If we cannot tell
+where you are, we ask for consent first.</p>
+
+<h2>How long</h2>
+<p>Event-level records are kept for at most 90 days, then deleted. We do not keep a backup copy
+of those raw records. Aggregated counts that can no longer be linked to your identifier may be
+kept longer.</p>
+
+<h2>Who receives it</h2>
+<p>The analytics runs on this site's own domain. Our processor is Netlify, Inc., 512 2nd Street,
+Suite 200, San Francisco, CA 94107, which hosts the site and stores the records (Netlify Blobs)
+under its data processing agreement. We do not send this data to an analytics vendor. Netlify
+may use subprocessors listed in its DPA.</p>
+
+<h2>Transfers</h2>
+<p>Records are processed in the United States. For EU/UK personal data the safeguard is
+Netlify's DPA: EU standard contractual clauses (controller to processor) and, where certified
+and applicable, the EU-US Data Privacy Framework and the UK extension. You can ask us for a
+copy of the relevant transfer terms.</p>
+
+<h2>Your rights</h2>
+<p>You can ask for access, correction, deletion, or restriction, and you can object or withdraw
+consent. To delete analytics data, send the <code>anonymous_id</code> from this browser (we
+will not ask for a wallet signature or a government ID). We respond within 30 days. You can
+also complain to a supervisory authority. Contact:
+<span class="privacy-contact">contact@obsanity.net</span>.</p>
+
+<h2>Consent settings</h2>
+<p>Current state: <span id="obs-consent-state"></span></p>
+<p>Your analytics identifier on this device (for deletion requests): <code id="obs-anon-id">not present</code></p>
+<button id="obs-withdraw-consent" type="button">Withdraw consent / delete local analytics id</button>
+
+<script>
+(function () {
+  document.getElementById('site-host').textContent = location.host;
+  try {
+    var st = document.getElementById('obs-consent-state');
+    var granted = localStorage.getItem('obs_analytics_consent') === 'granted';
+    st.textContent = granted ? 'Analytics are ON (consent given).' : 'Analytics are OFF on this device.';
+  } catch (e) {}
+  try {
+    var aid = localStorage.getItem('obs_aid') || sessionStorage.getItem('obs_aid');
+    if (aid) document.getElementById('obs-anon-id').textContent = aid;
+  } catch (e) {}
+  // Withdrawal is wired to OBS.consent.revoke() in /obs-analytics.js (clears ids + stops sends).
+})();
+</script>
+</body>
+</html>

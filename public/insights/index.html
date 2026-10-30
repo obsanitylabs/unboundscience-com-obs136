@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- OBS-125 — baked-in per-site dashboard (each site's own domain, e.g. /insights/).
+     Auth: enter the site's INSIGHTS_TOKEN (from the company secret store); it is kept in
+     sessionStorage only, sent as a Bearer header to the same-origin /api/insights.
+     Investor board: open on the primary site and add the sibling site's URL to load both
+     products' aggregates side by side, then use the browser's Print → Save as PDF for the
+     weekly export. No analytics scripts load on this page (it never tracks its viewers). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Insights — Obsanity</title>
+<style>
+  body{font:14px/1.5 ui-monospace,monospace;margin:2rem;max-width:900px;color:#111}
+  table{border-collapse:collapse;margin:1rem 0}
+  td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}
+  input{width:280px}
+  .err{color:#b00}
+  h2{margin-top:2rem}
+  nav a{margin-right:1rem}
+</style>
+</head>
+<body>
+<h1>Insights</h1>
+<nav><a href="#traction">Traction</a><a href="#product">Product</a><a href="#quality">Data quality</a>
+  <button onclick="window.print()">Export PDF</button></nav>
+<p>
+  <label>Insights token <input id="tok" type="password"></label>
+  <button id="go">Load</button>
+  <span id="status"></span>
+</p>
+<section id="traction"><h2>Investor traction</h2><div id="t"></div></section>
+<section id="product"><h2>Product funnel</h2><div id="f"></div></section>
+<section id="quality"><h2>Data quality</h2><div id="q"></div></section>
+
+<script>
+const el = (id) => document.getElementById(id);
+function table(rows) {
+  if (!rows.length) return '<p><em>no data in window</em></p>';
+  return '<table>' + rows.map((r, i) => '<tr>' + r.map((c, j) => (i ? `<td>${c}</td>` : `<th>${c}</th>`)).join('') + '</tr>').join('') + '</table>';
+}
+async function load(url, tok) {
+  const res = await fetch(url + '/api/insights?days=30', { headers: { authorization: 'Bearer ' + tok } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+function render(d, siteLabel) {
+  const wau = Object.entries(d.wau || {}).map(([w, n]) => [w, n]);
+  const coh = Object.entries(d.retentionCohorts || {}).map(([day2, c]) => [day2, c.users, c.d1, c.d7, c.d30]);
+  const ch = Object.entries(d.channelMix || {}).sort((a2, b2) => b2[1] - a2[1]).map(([k, n]) => [k, n]);
+  const st = [['share rate', d.shareRate], ['new users (30d)', d.newUsers], ['activation rate', d.activationRate], ['activated users', d.activatedUsers]];
+  el('t').innerHTML += `<h3>${siteLabel}</h3>` + table([['ISO week', 'WAU'], ...wau]) + table([['cohort day', 'users', 'D1', 'D7', 'D30'], ...coh]) + table([['metric', 'value'], ...st]) + table([['channel (source/medium)', 'users'], ...ch]);
+  const fn = Object.entries(d.funnels || {}).flatMap(([p, steps]) => Object.entries(steps).map(([k, n]) => [p, k, n]));
+  el('f').innerHTML += table([['product', 'funnel step', 'unique users'], ...fn]);
+  const qd = Object.entries(d.dataQuality || {}).map(([day2, q]) => [day2, q.accepted || 0, q.rejected || 0, q.droppedAttributes || 0, q.botFiltered || 0]);
+  const pv = Object.entries(d.pageviews || {}).map(([p, n]) => {
+    const other = Object.entries(d.eventCounts || {}).filter(([k]) => k.startsWith(p + ':') && !k.endsWith(':page_view')).reduce((a, [, n2]) => a + n2, 0);
+    return [p, n, other, n ? +(other / n).toFixed(2) : 0];
+  });
+  el('q').innerHTML += `<h3>${siteLabel}</h3>` + table([['day', 'accepted', 'rejected', 'dropped attrs', 'bot-filtered'], ...qd]) + table([['product', 'pageviews', 'non-pageview events', 'ratio (sanity 0.2–2.0)'], ...pv]);
+}
+el('go').onclick = async () => {
+  el('status').textContent = 'loading…'; el('t').innerHTML = ''; el('f').innerHTML = ''; el('q').innerHTML = '';
+  try {
+    const tok = el('tok').value; sessionStorage.setItem('obs_insights_token', tok);
+    await render(await load('', tok), location.hostname);
+    const peer = new URLSearchParams(location.search).get('peer'); // investor board: ?peer=https://phreaking.fun
+    if (peer) await render(await load(peer, tok), new URL(peer).hostname);
+    el('status').textContent = 'ok';
+  } catch (e) { el('status').innerHTML = '<span class="err">' + e.message + '</span>'; }
+};
+el('tok').value = sessionStorage.getItem('obs_insights_token') || '';
+</script>
+</body>
+</html>

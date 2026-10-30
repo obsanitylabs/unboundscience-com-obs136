@@ -65,8 +65,21 @@
   window.OBS = {
     consent: {
       grant: function () { try { localStorage.setItem(LS_KEY, 'granted'); } catch (e) {} window.OBS.page(); },
-      revoke: function () { try { localStorage.setItem(LS_KEY, 'revoked'); } catch (e) {} },
+      // GC OBS-156 condition 4 — withdrawal deletes the local identifiers and first-touch
+      // attribution keys, not just the flag; new collection stops immediately.
+      revoke: function () {
+        try {
+          localStorage.setItem(LS_KEY, 'revoked');
+          localStorage.removeItem('obs_aid'); sessionStorage.removeItem('obs_aid');
+          sessionStorage.removeItem('obs_sid'); localStorage.removeItem(UTM_KEY);
+        } catch (e) {}
+      },
       status: consented,
+    },
+    // Read-only: returns the stored anonymous_id (or null). Never persists anything, so
+    // nothing is stored on the device pre-consent. Users copy this id for deletion requests.
+    anonymousId: function () {
+      try { return localStorage.getItem('obs_aid') || sessionStorage.getItem('obs_aid') || null; } catch (e) { return null; }
     },
     page: function (path) { send([{ event_name: 'page_view', page_path: path || location.pathname }]); },
     sessionStart: function (isReturning, daysSince) { send([{ event_name: 'session_start', is_returning: !!isReturning, days_since_last_session: Number(daysSince) || 0 }]); },
@@ -75,4 +88,47 @@
   };
   // Wallet-provider SDKs must be loaded by the app only after OBS.consent.status() === true.
   window.addEventListener('pageshow', function () { if (consented()) window.OBS.page(); });
+
+  // GC-approved consent banner (OBS-156 §2): off until you opt in; no pre-ticked box;
+  // never blocks the product; link to the notice page, not a substitute for it.
+  var NOTICE_URL = window.OBS_NOTICE_PATH || '/analytics-notice.html';
+  function bannerHidden() {
+    try { return localStorage.getItem(LS_KEY) !== null; } catch (e) { return true; }
+  }
+  function removeBanner() { var b = document.getElementById('obs-consent-banner'); if (b) b.remove(); }
+  function showBanner() {
+    if (bannerHidden() || document.getElementById('obs-consent-banner')) return;
+    var p = location.pathname;
+    if (p.indexOf('/insights') === 0 || p.indexOf('/analytics-notice') === 0) return;
+    var d = document.createElement('div');
+    d.id = 'obs-consent-banner';
+    d.setAttribute('role', 'region');
+    d.setAttribute('aria-label', 'Analytics consent');
+    d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:2147483000;background:#111;color:#eee;font:13px/1.5 system-ui,sans-serif;padding:12px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center';
+    var span = document.createElement('span');
+    span.textContent = 'Product analytics are off until you opt in. We store a random id on this device and send page paths and campaign tags to measure the product. No ads. Withdraw any time. ';
+    var a = document.createElement('a');
+    a.href = NOTICE_URL; a.textContent = 'Analytics notice';
+    a.style.cssText = 'color:#7cc;color:inherit;text-decoration:underline';
+    var ok = document.createElement('button');
+    ok.textContent = 'Allow analytics';
+    ok.style.cssText = 'background:#2e7d32;color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit';
+    ok.onclick = function () { window.OBS.consent.grant(); removeBanner(); };
+    var no = document.createElement('button');
+    no.textContent = 'No thanks';
+    no.style.cssText = 'background:#333;color:#ccc;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit';
+    no.onclick = function () { window.OBS.consent.revoke(); removeBanner(); };
+    d.appendChild(span); d.appendChild(a); d.appendChild(ok); d.appendChild(no);
+    document.body.appendChild(d);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showBanner);
+  else showBanner();
+  // Withdraw from the notice page: same revoke path (clears ids + stops sends).
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'obs-withdraw-consent') {
+      window.OBS.consent.revoke(); removeBanner();
+      var s = document.getElementById('obs-consent-state');
+      if (s) s.textContent = 'Analytics are OFF on this device. Local identifiers were deleted.';
+    }
+  });
 })();

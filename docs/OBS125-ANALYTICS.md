@@ -1,6 +1,6 @@
 # OBS-125 — First-party analytics (Netlify-native)
 
-Board direction 2026-10-30: existing infra only; each site gets its own dashboard baked in on its own domain, running in the GitHub repo + Netlify instance. Storage is **Netlify Blobs** — no third-party processor anywhere (C9). Full compliance delta vs the earlier PostHog-on-VPS design: `docs/COMPLIANCE-DELTA.md`.
+Board direction 2026-10-30: existing infra only; each site gets its own dashboard baked in on its own domain, running in the GitHub repo + Netlify instance. Storage is **Netlify Blobs** — Netlify, Inc. is the sole processor (site hosting + storage under its DPA); there is no analytics vendor and no other processor (C9 amended per GC OBS-156). Full compliance delta vs the earlier PostHog-on-VPS design: `docs/COMPLIANCE-DELTA.md`. Privacy notice: `public/analytics-notice.html` (GC-approved text).
 
 ## What landed here
 

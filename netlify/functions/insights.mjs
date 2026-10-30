@@ -2,14 +2,23 @@
 // Token auth: Authorization: Bearer $INSIGHTS_TOKEN (set via Netlify env from the company secret store).
 // TLS is terminated by Netlify (R7). 404 (not 401) for bad tokens — do not reveal the endpoint.
 'use strict';
+import { timingSafeEqual } from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 
 const ALLOWED_ORIGIN = (process.env.INSIGHTS_ALLOWED_ORIGIN || '').trim(); // sibling site for the investor board
 const CORS = ALLOWED_ORIGIN ? { 'access-control-allow-origin': ALLOWED_ORIGIN, 'vary': 'origin' } : {};
 
+// R7 — constant-time token compare (length leak only; 404 either way).
+function tokenOk(provided, expected) {
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export default async (req) => {
   const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!process.env.INSIGHTS_TOKEN || token !== process.env.INSIGHTS_TOKEN) {
+  if (!tokenOk(token, process.env.INSIGHTS_TOKEN)) {
     return new Response(JSON.stringify({ error: 'not-found' }), { status: 404 });
   }
   const url = new URL(req.url);

@@ -1,7 +1,8 @@
 // OBS-125 — Netlify-native collector (same-origin, per-site). Replaces the VPS collector proxy.
 // Enforces R1 (allowlist, query-strip, host-only referrer), R2 (consent fail-closed → 451),
 // R3 (IP truncation before persistence, log redaction), R6 (bot filter — counted, never stored).
-// Storage: Netlify Blobs (first-party, same provider as the site — C9: no third-party processor).
+// Storage: Netlify Blobs (same provider as the site — Netlify, Inc. is the sole processor; see
+// docs/COMPLIANCE-DELTA.md and public/analytics-notice.html).
 // Deployed at POST /api/collect on each site's own domain.
 'use strict';
 import { getStore } from '@netlify/blobs';
@@ -11,6 +12,7 @@ import { makeBotFilter } from '../shared/enforce.mjs';
 const isBot = makeBotFilter(); // in-process sliding window (per warm instance; demo volume)
 const JSON_HEADERS = { 'content-type': 'application/json' };
 const NO_STORE = { 'cache-control': 'no-store' };
+const MAX_BATCH_EVENTS = 50; // cheap-DoS cap: events past the cap are rejected+counted, never persisted
 
 function dayKey(d = new Date()) { return `events/${d.toISOString().slice(0, 10)}`; }
 function qualityKey(d = new Date()) { return `quality/${d.toISOString().slice(0, 10)}`; }
@@ -45,7 +47,9 @@ export default async (req) => {
 
   if (bot.bot) { await bumpQuality({ botFiltered: 1 }); return new Response(JSON.stringify({ ok: true, filtered: true }), { status: 200, headers: { ...JSON_HEADERS, ...NO_STORE } }); }
 
-  const { accepted, stats } = validateBatch(events);
+  const overflow = Array.isArray(events) ? Math.max(0, events.length - MAX_BATCH_EVENTS) : 0;
+  const { accepted, stats } = validateBatch(overflow ? events.slice(0, MAX_BATCH_EVENTS) : events);
+  if (overflow) stats.rejected += overflow;
   await bumpQuality({ accepted: stats.accepted, rejected: stats.rejected, droppedAttributes: stats.droppedAttributes });
   if (accepted.length === 0) return new Response(JSON.stringify({ ok: true, accepted: 0 }), { status: 200, headers: { ...JSON_HEADERS, ...NO_STORE } });
 

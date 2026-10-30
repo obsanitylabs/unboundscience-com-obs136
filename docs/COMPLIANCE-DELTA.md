@@ -16,9 +16,12 @@ CISO/GC re-confirmation before tracking fires.
 | R5 | No outbound telemetry / no third-party CDNs | Netlify static+functions only; no third-party scripts | none |
 | R6 | Truncated-IP-rate + UA bot filter, counted not stored | Same heuristics; `botFiltered` counted in quality Blobs only | none |
 | R7 | TLS-only, auth-gated dashboards, pinned versions | Netlify TLS; `/api/insights` bearer-token (404 on bad token); function runtime pinned by Netlify | Function PaaS instead of pinned docker images |
-| C9 | First-party SDK | SDK served from each site's own origin; collector same-origin | **Stronger** (no shared analytics subdomain at all) |
+| C9 | First-party SDK | SDK served from each site's own origin; collector same-origin | **Stronger** (no shared analytics subdomain at all). Per GC OBS-156: Netlify, Inc. is the sole **processor** (hosting + Blobs storage under its DPA) — do not claim "no processor" or "no transfers"; US processing is a restricted transfer for EU/UK visitors safeguarded by Netlify DPA SCCs (Module 2) + EU-US DPF/UK extension where certified. |
+
+Verdicts (2026-10-30): CISO re-confirmed R4/R7 (OBS-155) — APPROVE; GC re-confirmed the storage/processor delta and approved the notice text (OBS-156) — conditions: notice live with controller fields filled, Netlify account DPA confirmed in writing, consent revoke clears local ids (implemented in `obs-analytics.js`), no "no processor"/"no transfers" claims, `INSIGHTS_TOKEN` ≥32 bytes from the company secret store rotated every 90d.
 
 Open items before tracking fires on production:
-1. CISO/GC re-confirm the R4/R7 storage delta (above).
-2. GC approval of the per-site privacy-notice text (Art.13 checklist, existing draft).
-3. `experiment_type` closed list finalized from ubs app code.
+1. ~~CISO/GC re-confirm the R4/R7 storage delta~~ — DONE (OBS-155, OBS-156).
+2. ~~GC approval of the per-site privacy-notice text~~ — DONE (OBS-156 §2); published at `public/analytics-notice.html`; controller fields pending board confirmation.
+3. `INSIGHTS_TOKEN` set in each site's Netlify env from the company secret store; `INSIGHTS_ALLOWED_ORIGIN` unset except the site hosting the cross-origin investor board.
+4. `experiment_type` closed list finalized from ubs app code.

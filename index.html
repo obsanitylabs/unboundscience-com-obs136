@@ -26,6 +26,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // OBS-125 first-party analytics config — consent-gated SDK (see public/obs-analytics.js)
+      window.OBS_ANALYTICS_PRODUCT = 'ubs';
+      window.OBS_BUILD_VERSION = '';
+    </script>
+    <script src="/obs-analytics.js" defer></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

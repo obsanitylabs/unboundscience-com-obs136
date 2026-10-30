@@ -1,0 +1,24 @@
+# OBS-125 — Netlify config for the Unbound Science site.
+# Analytics: netlify/functions (collector, insights, retention purge) + Netlify Blobs storage.
+# The legacy deploy.sh path (VPS /mockup-unbound) still works for the static build, but the
+# analytics functions + Blobs storage only run on the Netlify instance (board direction 2026-10-30).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "interest-cohort=()"

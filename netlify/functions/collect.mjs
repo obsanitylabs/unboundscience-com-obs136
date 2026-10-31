@@ -8,7 +8,6 @@
 'use strict';
 import { getStore } from '@netlify/blobs';
 import { validateBatch, truncateIp, redactLogs } from '../shared/enforce.mjs';
-import { makeBotFilter } from '../shared/enforce.mjs';
 
 const isBot = makeBotFilter(); // in-process sliding window (per warm instance; demo volume)
 const JSON_HEADERS = { 'content-type': 'application/json' };
@@ -18,7 +17,6 @@ const MAX_BATCH_EVENTS = 50; // cheap-DoS cap: events past the cap are rejected+
 function dayKey(d = new Date()) { return `events/${d.toISOString().slice(0, 10)}`; }
 function qualityKey(d = new Date()) { return `quality/${d.toISOString().slice(0, 10)}`; }
 
-export default async (req) => {
   if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'not-found' }), { status: 404, headers: JSON_HEADERS });
 
   let parsed;
@@ -29,8 +27,6 @@ export default async (req) => {
   const rawIp = req.headers.get('x-nf-client-connection-ip') || '';
   const ip = truncateIp(rawIp) || null;
   const ua = req.headers.get('user-agent') || '';
-  const bot = isBot({ truncatedIp: ip, userAgent: ua }); // UA used transiently, never persisted
-  const store = getStore('site-analytics');
   const today = new Date().toISOString().slice(0, 10);
 
   const bumpQuality = async (delta) => {
@@ -42,8 +38,6 @@ export default async (req) => {
 
   if (bot.bot) { await bumpQuality({ botFiltered: 1 }); return new Response(JSON.stringify({ ok: true, filtered: true }), { status: 200, headers: { ...JSON_HEADERS, ...NO_STORE } }); }
 
-  const overflow = Array.isArray(events) ? Math.max(0, events.length - MAX_BATCH_EVENTS) : 0;
-  const { accepted, stats } = validateBatch(overflow ? events.slice(0, MAX_BATCH_EVENTS) : events);
   if (overflow) stats.rejected += overflow;
   await bumpQuality({ accepted: stats.accepted, rejected: stats.rejected, droppedAttributes: stats.droppedAttributes });
   if (accepted.length === 0) return new Response(JSON.stringify({ ok: true, accepted: 0 }), { status: 200, headers: { ...JSON_HEADERS, ...NO_STORE } });
@@ -55,6 +49,3 @@ export default async (req) => {
   await store.setJSON(ek, cur);
   console.log(redactLogs(`collect: accepted=${stats.accepted} rejected=${stats.rejected} ip=${ip}`));
   return new Response(JSON.stringify({ ok: true, accepted: stats.accepted }), { status: 200, headers: { ...JSON_HEADERS, ...NO_STORE } });
-};
-
-export const config = { path: '/api/collect' };

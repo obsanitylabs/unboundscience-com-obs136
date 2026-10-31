@@ -16,6 +16,13 @@
   [headers.values]
     Cache-Control = "no-store"
 
+# OBS-226 — admin page is never indexed and never cached.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Cache-Control = "no-store"
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -32,4 +39,14 @@
 [[redirects]]
   from = "/api/insights"
   to = "/.netlify/functions/insights"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/*"
+  to = "/.netlify/functions/admin"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
   status = 200

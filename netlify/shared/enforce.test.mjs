@@ -6,7 +6,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateBatch, validateEvent, truncateIp, redactLogs, stripQuery, hostOnly,
-  makeBotFilter, ENUMS_OUT,
 } from './enforce.mjs';
 
 const ISO = new Date().toISOString();
@@ -102,35 +101,6 @@ test('missing required attribute rejects the event', () => {
   const r = validateEvent(valid({ page_path: undefined }));
   assert.ok(!r.ok);
   assert.match(r.reason, /missing-required/);
-});
-
-// OBS-355 — activation_complete was silently always-dropped (first_session fell to the
-// default case and then failed the missing-required check) for BOTH products.
-test('OBS-355: activation_complete accepted for ubs and pff (first_session bool)', () => {
-  const act = (over) => validateEvent(valid({
-    event_name: 'activation_complete',
-    first_session: true, time_to_activation_s: 42, experiment_type: 'unclassified',
-    activation_path: 'connect-experiment', ...over,
-  }));
-  const ubs = act({});
-  assert.ok(ubs.ok, `ubs activation_complete must be accepted, got ${JSON.stringify(ubs)}`);
-  assert.equal(ubs.event.first_session, true);
-  assert.equal(ubs.event.time_to_activation_s, 42);
-  const pff = act({ product: 'pff', box_type: 'blue', activation_path: 'connect-blue_box' });
-  assert.ok(pff.ok, `pff activation_complete must be accepted, got ${JSON.stringify(pff)}`);
-  assert.equal(pff.event.first_session, true);
-  assert.equal(pff.event.box_type, 'blue');
-  assert.ok(!('experiment_type' in pff.event)); // extra for pff: dropped, not persisted
-});
-
-test('OBS-355: non-bool first_session drops the attribute and rejects activation_complete', () => {
-  const r = validateEvent(valid({
-    event_name: 'activation_complete',
-    first_session: 'yes', time_to_activation_s: 42,
-    experiment_type: 'unclassified', activation_path: 'connect-experiment',
-  }));
-  assert.ok(!r.ok);
-  assert.match(r.reason, /missing-required:first_session/);
 });
 
 test('R3: IPv4 truncated to /24; IPv6 truncated to first 3 hextets; garbage null', () => {

@@ -120,7 +120,6 @@ export function validateEvent(ev) {
     switch (k) {
       case 'page_path': out.page_path = stripQuery(v); break;
       case 'referrer': out.referrer = hostOnly(v); break;
-      case 'is_returning': if (typeOk(v, 'bool')) out.is_returning = v; else dropped.push(k); break;
       case 'days_since_last_session': case 'time_to_activation_s': case 'step_index': case 'api_status':
         if (typeOk(v, k === 'api_status' ? 'int' : 'num')) out[k] = v; else dropped.push(k); break;
       case 'chain_id':
@@ -174,28 +173,6 @@ export function truncateIp(ip) {
     return g.slice(0, 3).map((x) => x || '0').join(':') + ':0000:0000:0000:0000:0000';
   }
   return null;
-}
-
-// OBS-226 — IP-range deny compare. `truncated` is the output of truncateIp() (already cut to the
-// /24 or three-hextet form); ranges are the stored `{ prefix, family }` entries or bare prefix
-// strings. String equality on the network portion only, so a deny can never be finer than the
-// collector's truncation (R3 stays intact).
-export function ipMatchesDenied(truncated, ranges) {
-  if (typeof truncated !== 'string' || !truncated.length) return false;
-  if (!Array.isArray(ranges) || ranges.length === 0) return false;
-  for (const r of ranges) {
-    const prefix = typeof r === 'string' ? r : r && r.prefix;
-    if (typeof prefix !== 'string' || !prefix) continue;
-    const net = prefix.split('/')[0];
-    if (truncated.includes('.') && net.includes('.')) {
-      if (truncated === net) return true;
-    } else if (truncated.includes(':') && net.includes(':')) {
-      const t = truncated.split(':').slice(0, 3).join(':');
-      const n = net.split(':').filter(Boolean).slice(0, 3).join(':');
-      if (t && n && t === n) return true;
-    }
-  }
-  return false;
 }
 
 const IPV4_RE = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;

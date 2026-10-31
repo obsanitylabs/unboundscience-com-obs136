@@ -25,7 +25,7 @@ export default async (req) => {
   const days = Math.min(Math.max(parseInt(url.searchParams.get('days') || '30', 10) || 30, 1), 90);
 
   const store = getStore('site-analytics');
-  const keys = await store.list();
+  const { blobs: keys } = await store.list();
   const dayRe = /^\d{4}-\d{2}-\d{2}$/;
   const eventDays = keys.map((k) => k.key.replace(/^events\//, '')).filter((d) => dayRe.test(d)).sort().slice(-days);
 

@@ -22,3 +22,14 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "interest-cohort=()"
+
+# OBS-125/163 — API routes → functions (Vite static site; no framework rewrites).
+[[redirects]]
+  from = "/api/collect"
+  to = "/.netlify/functions/collect"
+  status = 200
+
+[[redirects]]
+  from = "/api/insights"
+  to = "/.netlify/functions/insights"
+  status = 200

@@ -16,6 +16,13 @@
   [headers.values]
     Cache-Control = "no-store"
 
+# OBS-226 — admin page is never indexed and never cached.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Cache-Control = "no-store"
+
 [[headers]]
   for = "/*"
   [headers.values]

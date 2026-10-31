@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateBatch, validateEvent, truncateIp, redactLogs, stripQuery, hostOnly,
-  makeBotFilter, ENUMS_OUT,
+  makeBotFilter, ENUMS_OUT, ipMatchesDenied,
 } from './enforce.mjs';
 
 const ISO = new Date().toISOString();
@@ -147,4 +147,28 @@ test('enums exposure matches the metric dictionary', () => {
   assert.deepEqual(ENUMS_OUT.product, ['ubs', 'pff']);
   assert.ok(ENUMS_OUT.utm_source.includes('direct'));
   assert.deepEqual(ENUMS_OUT.experiment_type, ['unclassified']);
+});
+
+// OBS-226 — IP-range deny compare (guide §6.2). Values passed are already truncated.
+test('OBS-226 ipMatchesDenied: IPv4 /24 exact network match', () => {
+  const ranges = [{ prefix: '203.0.113.0/24', family: 'ipv4' }];
+  assert.ok(ipMatchesDenied(truncateIp('203.0.113.57'), ranges)); // 203.0.113.0
+  // truncation is the caller's job: a host octet must not match the prefix
+  assert.ok(!ipMatchesDenied('203.0.113.1', ranges));
+  assert.ok(!ipMatchesDenied('198.51.100.0', ranges));
+  assert.ok(!ipMatchesDenied(truncateIp('198.51.100.9'), ranges));
+});
+
+test('OBS-226 ipMatchesDenied: IPv6 three-hextet match and mismatch', () => {
+  const ranges = [{ prefix: '2001:0db8:85a3::/48', family: 'ipv6' }];
+  assert.ok(ipMatchesDenied(truncateIp('2001:0db8:85a3:0000:0000:8a2e:0370:7334'), ranges));
+  assert.ok(!ipMatchesDenied(truncateIp('2001:0db8:85b3:0000:0000:0000:0000:0000'), ranges));
+});
+
+test('OBS-226 ipMatchesDenied: empty/null range list and null ip never match', () => {
+  assert.ok(!ipMatchesDenied('203.0.113.0', []));
+  assert.ok(!ipMatchesDenied('203.0.113.0', null));
+  assert.ok(!ipMatchesDenied(null, [{ prefix: '203.0.113.0/24' }]));
+  // bare prefix strings are accepted as well as { prefix } objects
+  assert.ok(ipMatchesDenied('203.0.113.0', ['203.0.113.0/24']));
 });

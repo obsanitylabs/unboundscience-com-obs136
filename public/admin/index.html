@@ -1,0 +1,197 @@
+<!doctype html>
+<!-- OBS-226 — admin dashboard for unboundscience.com. Same visual language as /insights/.
+     Auth: the operator's INSIGHTS_TOKEN is held in sessionStorage key `obs_admin_token` only and
+     sent as a Bearer header to same-origin /api/admin/*. Never localStorage, never a cookie,
+     never a query string. No analytics script loads on this page. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin — Unbound Science</title>
+<style>
+  body{font:14px/1.5 ui-monospace,monospace;margin:2rem;max-width:960px;color:#111}
+  table{border-collapse:collapse;margin:1rem 0}
+  td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}
+  input{width:300px}
+  .err{color:#b00}
+  .ok{color:#070}
+  h2{margin-top:2rem}
+  nav a{margin-right:1rem}
+  .row{margin:.35rem 0}
+  button{margin-left:.4rem}
+  .note{color:#666}
+  .unavailable{color:#666}
+</style>
+</head>
+<body>
+<h1>Admin</h1>
+<nav>
+  <a href="#traction">Traction</a><a href="#frequency">Frequency</a><a href="#product">Product</a>
+  <a href="#visitors">Top visitors</a><a href="#assets">Assets</a><a href="#moderation">Moderation</a>
+  <a href="#audit">Audit</a>
+  <button onclick="window.print()">Print</button>
+</nav>
+<p>
+  <label>Admin token <input id="tok" type="password"></label>
+  <button id="go">Load</button>
+  <span id="status"></span>
+</p>
+<p class="note">Bans are enforced within 30 seconds on warm instances; a cold start reads fresh.</p>
+
+<section id="traction"><h2>Traction</h2><div id="traction-body"></div></section>
+<section id="frequency"><h2>Frequency</h2><div id="freq-body"></div></section>
+<section id="product"><h2>Product funnel &amp; data quality</h2><div id="prod-body"></div></section>
+<section id="visitors"><h2>Top visitors</h2><div id="visitors-body"></div></section>
+<section id="assets"><h2>Assets</h2><div id="assets-body"></div></section>
+
+<section id="moderation"><h2>Moderation</h2>
+  <div id="mod-forms">
+    <div class="row"><input id="f-ban-user" placeholder="UUID to ban">
+      <input id="f-ban-user-note" placeholder="note (optional)">
+      <button data-op="ban-user" data-uuid="f-ban-user" data-note="f-ban-user-note">Ban user</button></div>
+    <div class="row"><input id="f-unban-user" placeholder="UUID to unban">
+      <button data-op="unban-user" data-uuid="f-unban-user">Unban user</button></div>
+    <div class="row"><input id="f-ban-wallet" placeholder="0x wallet address to ban">
+      <input id="f-ban-wallet-note" placeholder="note (optional)">
+      <button data-op="ban-wallet" data-address="f-ban-wallet" data-note="f-ban-wallet-note">Ban wallet</button></div>
+    <div class="row"><input id="f-unban-wallet" placeholder="0x wallet address to unban">
+      <button data-op="unban-wallet" data-address="f-unban-wallet">Unban wallet</button></div>
+    <div class="row"><input id="f-reject-ip" placeholder="IPv4 A.B.C.0/24 or IPv6 hhhh:hhhh:hhhh::/48">
+      <input id="f-reject-ip-note" placeholder="note (optional)">
+      <button data-op="reject-ip-range" data-prefix="f-reject-ip" data-note="f-reject-ip-note">Add IP range</button></div>
+    <div class="row"><input id="f-allow-ip" placeholder="prefix to remove">
+      <button data-op="allow-ip-range" data-prefix="f-allow-ip">Remove IP range</button></div>
+  </div>
+  <p><span id="mod-counts">users=0 wallets=0 ipRanges=0</span> <span id="mod-error"></span></p>
+  <div id="mod-lists"></div>
+</section>
+
+<section id="audit"><h2>Audit (last 7 days)</h2><div id="audit-body"></div></section>
+
+<script>
+const el = (id) => document.getElementById(id);
+let topIds = [];
+
+function table(rows) {
+  if (!rows.length) return '<p><em>no data in window</em></p>';
+  return '<table>' + rows.map((r, i) => '<tr>' + r.map((c, j) => (i ? `<td>${c}</td>` : `<th>${c}</th>`)).join('') + '</tr>').join('') + '</table>';
+}
+
+function token() { return sessionStorage.getItem('obs_admin_token') || ''; }
+
+async function api(path, opts = {}) {
+  const res = await fetch('/api/admin/' + path, {
+    method: opts.method || 'GET',
+    headers: Object.assign({ authorization: 'Bearer ' + token() }, opts.body ? { 'content-type': 'application/json' } : {}),
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  let body = null;
+  try { body = await res.json(); } catch (e) { body = null; }
+  if (!res.ok) { const err = new Error('HTTP ' + res.status); err.status = res.status; err.body = body; throw err; }
+  return body;
+}
+
+function renderSummary(d) {
+  const i = d.insights || {};
+  const wau = Object.entries(i.wau || {}).map(([w, n]) => [w, n]);
+  const coh = Object.entries(i.retentionCohorts || {}).map(([day, c]) => [day, c.users, c.d1, c.d7, c.d30]);
+  const ch = Object.entries(i.channelMix || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, n]);
+  const st = [['share rate', i.shareRate], ['new users', i.newUsers], ['activation rate', i.activationRate], ['activated users', i.activatedUsers]];
+  el('traction-body').innerHTML = table([['ISO week', 'WAU'], ...wau])
+    + table([['cohort day', 'users', 'D1', 'D7', 'D30'], ...coh])
+    + table([['metric', 'value'], ...st])
+    + table([['channel (source/medium)', 'users'], ...ch]);
+
+  const f = d.frequency || {};
+  el('freq-body').innerHTML = table([['day', 'events'], ...(f.eventsPerDay || []).map((r) => [r.day, r.events])])
+    + table([['day', 'uniques'], ...(f.uniquesPerDay || []).map((r) => [r.day, r.uniques])])
+    + table([['day', 'sessions'], ...(f.sessionsPerDay || []).map((r) => [r.day, r.sessions])]);
+
+  const fn = Object.entries(i.funnels || {}).flatMap(([p, steps]) => Object.entries(steps).map(([k, n]) => [p, k, n]));
+  const qd = Object.entries(i.dataQuality || {}).map(([day, q]) => [day, q.accepted || 0, q.rejected || 0, q.droppedAttributes || 0, q.botFiltered || 0]);
+  const pv = Object.entries(i.pageviews || {}).map(([p, n]) => {
+    const other = Object.entries(i.eventCounts || {}).filter(([k]) => k.startsWith(p + ':') && !k.endsWith(':page_view')).reduce((a, [, n2]) => a + n2, 0);
+    return [p, n, other, n ? +(other / n).toFixed(2) : 0];
+  });
+  el('prod-body').innerHTML = table([['product', 'funnel step', 'unique users'], ...fn])
+    + table([['day', 'accepted', 'rejected', 'dropped attrs', 'bot-filtered'], ...qd])
+    + table([['product', 'pageviews', 'non-pageview events', 'ratio (sanity 0.2–2.0)'], ...pv]);
+
+  // Top visitors — the id is truncated in the table; the full id is only ever copied to the
+  // clipboard by index, never rendered as text.
+  topIds = (d.topUsers || []).map((u) => u.anonymousId);
+  const rows = [['id (8 chars)', 'events', 'sessions', 'first seen', 'last seen', 'event mix', '']];
+  (d.topUsers || []).forEach((u, idx) => {
+    const mix = Object.entries(u.eventNames || {}).map(([k, n]) => `${k}:${n}`).join(' ');
+    rows.push([String(u.anonymousId).slice(0, 8), u.events, u.sessions, u.firstSeen || '-', u.lastSeen || '-', mix, `<button data-copy="${idx}">copy full id</button>`]);
+  });
+  el('visitors-body').innerHTML = table(rows);
+
+  const a = d.assets || {};
+  el('assets-body').innerHTML = table([['metric', 'value'],
+    ['Asset value', '<span class="unavailable">unavailable — no asset ledger on this site</span>'],
+    ['Asset traded volume', '<span class="unavailable">unavailable — no asset ledger on this site</span>']])
+    + `<p class="note">reason: ${a.reason || 'no-asset-ledger'}</p>`;
+}
+
+function renderModeration(d) {
+  const b = (d && d.bans) || {};
+  const users = b.users || []; const wallets = b.wallets || []; const ranges = b.ipRanges || [];
+  el('mod-counts').textContent = `users=${users.length} wallets=${wallets.length} ipRanges=${ranges.length}`;
+  const urows = users.map((u) => [String(u.anonymousId).slice(0, 8), u.createdAt, u.note || '']);
+  const wrows = wallets.map((w) => [String(w.walletHash).slice(0, 12), w.createdAt, w.note || '']);
+  const irows = ranges.map((p) => [p.prefix, p.family || '', p.createdAt, p.note || '']);
+  el('mod-lists').innerHTML = '<h3>Banned users (id truncated to 8)</h3>' + table([['id (8 chars)', 'createdAt', 'note'], ...urows])
+    + '<h3>Banned wallets (hash truncated to 12 hex)</h3>' + table([['walletHash (12 hex)', 'createdAt', 'note'], ...wrows])
+    + '<h3>Denied IP prefixes</h3>' + table([['prefix', 'family', 'createdAt', 'note'], ...irows]);
+}
+
+function renderAudit(d) {
+  const rows = (d.entries || []).map((e) => [e.at, e.op, e.kind, e.targetHash, e.actorFp]);
+  el('audit-body').innerHTML = table([['at', 'op', 'kind', 'targetHash', 'actorFp'], ...rows]);
+}
+
+async function submitMod(op, btn) {
+  el('mod-error').textContent = '';
+  const body = { op };
+  if (btn.dataset.uuid) body.anonymousId = el(btn.dataset.uuid).value.trim();
+  if (btn.dataset.address) body.address = el(btn.dataset.address).value.trim();
+  if (btn.dataset.prefix) body.prefix = el(btn.dataset.prefix).value.trim();
+  if (btn.dataset.note) { const n = el(btn.dataset.note).value.trim(); if (n) body.note = n; }
+  try {
+    await api('moderation', { method: 'POST', body });
+    const m = await api('moderation');
+    renderModeration(m);
+  } catch (e) {
+    const code = e.body && e.body.error ? e.body.error : 'HTTP ' + e.status;
+    el('mod-error').innerHTML = '<span class="err">' + code + '</span>';
+  }
+}
+
+el('go').onclick = async () => {
+  el('status').textContent = 'loading…';
+  sessionStorage.setItem('obs_admin_token', el('tok').value);
+  try {
+    renderSummary(await api('summary?days=30'));
+    renderModeration(await api('moderation'));
+    renderAudit(await api('audit?days=7'));
+    el('status').innerHTML = '<span class="ok">ok</span>';
+  } catch (e) {
+    el('status').innerHTML = '<span class="err">' + e.message + '</span>';
+  }
+};
+
+document.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button');
+  if (!btn) return;
+  if (btn.dataset.op) { submitMod(btn.dataset.op, btn); return; }
+  if (btn.dataset.copy !== undefined) {
+    navigator.clipboard.writeText(topIds[Number(btn.dataset.copy)] || '');
+  }
+});
+
+el('tok').value = sessionStorage.getItem('obs_admin_token') || '';
+</script>
+</body>
+</html>

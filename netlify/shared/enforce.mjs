@@ -120,7 +120,8 @@ export function validateEvent(ev) {
     switch (k) {
       case 'page_path': out.page_path = stripQuery(v); break;
       case 'referrer': out.referrer = hostOnly(v); break;
-      case 'is_returning': if (typeOk(v, 'bool')) out.is_returning = v; else dropped.push(k); break;
+      case 'is_returning': case 'first_session':
+        if (typeOk(v, 'bool')) out[k] = v; else dropped.push(k); break;
       case 'days_since_last_session': case 'time_to_activation_s': case 'step_index': case 'api_status':
         if (typeOk(v, k === 'api_status' ? 'int' : 'num')) out[k] = v; else dropped.push(k); break;
       case 'chain_id':

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unbound Science — waitlist</title>
+<style>
+  :root { --accent: #0b6e4f; --accent2: #0e8a63; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: #fafafa; color: #1a1a1a; line-height: 1.6; }
+  main { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  .brand { font-size: 1rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 1.8rem; margin: .4rem 0 1rem; }
+  .banner { background: #fff8e6; border: 1px solid #e6d9a8; padding: 1rem; border-radius: 10px; margin: 0 0 1.2rem; }
+  .banner p { margin: .5rem 0 0; }
+  form { background: #fff; border: 1px solid #e3e3e3; border-radius: 14px; padding: 1.4rem; }
+  label { display: block; font-weight: 600; margin-bottom: .3rem; }
+  input[type=email], input[type=text] { width: 100%; padding: .7rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+  .field { margin-bottom: 1rem; }
+  .hp { position: absolute; left: -9999px; top: -9999px; }
+  .consent { display: flex; gap: .5rem; align-items: flex-start; font-size: .88rem; margin: 0 0 1rem; }
+  button { background: var(--accent); color: #fff; border: 0; padding: .8rem 1.6rem; border-radius: 9px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--accent2); }
+  .note { font-size: .8rem; color: #666; margin-top: 1rem; }
+  .status { margin-top: 1rem; font-weight: 600; min-height: 1.4em; }
+  .ok { color: var(--accent); } .err { color: #b00020; }
+  .share { display: none; margin-top: 1rem; font-size: .9rem; }
+  .share code { background: #f0f0f0; padding: .15rem .4rem; border-radius: 6px; user-select: all; word-break: break-all; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Unbound Science</div>
+  <h1>Join the Unbound Science waitlist</h1>
+  <div class="banner">
+    <p><strong>Unbound Science is not available to use yet. Joining the waitlist only asks us to email you if that changes. This is not financial, investment, or legal advice, and it is not an offer of a security or token.</strong></p>
+    <p>Unbound Science is a gated demo, not a live product. The waitlist does not create an account and does not accept money.</p>
+  </div>
+  <form id="wl" method="post" action="/api/waitlist">
+    <div class="field">
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+    </div>
+    <div class="field">
+      <label for="ref">Referral code <span style="font-weight:400;color:#666">(optional)</span></label>
+      <input id="ref" name="referral_code" type="text" maxlength="10">
+    </div>
+    <!-- honeypot: real users never see or fill this -->
+    <div class="hp" aria-hidden="true"><label>Company website<input name="website_extra" tabindex="-1" autocomplete="off"></label></div>
+    <div class="consent">
+      <input id="consent" name="consent" type="checkbox" required>
+      <label for="consent">Email me product updates and an early-access notice for Unbound Science only. I can unsubscribe at any time. This is not an account, a purchase, or an offer of a token, security, or investment. <a href="/privacy.html">privacy notice</a></label>
+    </div>
+    <button type="submit">Join the waitlist</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="share" id="share">
+      Your referral link, if you confirmed:
+      <code id="sharelink"></code> <button type="button" id="copybtn" style="padding:.3rem .8rem">Copy</button>
+    </div>
+  </form>
+  <p class="note">This page loads first-party code only: no advertising pixels and no third-party trackers. Every email has a one-click unsubscribe. Unconfirmed requests are deleted after 7 days.</p>
+</main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var utmFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id'];
+  function sendEvent(type) {
+    var b = { type: type, product: 'unbound-science', landing_path: location.pathname };
+    utmFields.forEach(function (f) { b[f] = q.get(f); });
+    fetch('/api/waitlist/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).catch(function () {});
+  }
+  function setStatus(cls, msg) {
+    var el = document.getElementById('status');
+    el.className = 'status ' + cls; el.textContent = msg;
+  }
+  if (q.get('ref')) document.getElementById('ref').value = q.get('ref');
+  if (q.get('verified') === '1') {
+    setStatus('ok', 'Email confirmed — you are on the list.');
+    var share = location.origin + location.pathname + '?ref=' + encodeURIComponent(q.get('ref') || '');
+    if (q.get('ref')) { document.getElementById('sharelink').textContent = share; document.getElementById('share').style.display = 'block'; }
+  } else if (q.get('verified') === '0') {
+    setStatus('err', 'That confirmation link is not valid or has expired. Request a new one from the waitlist page.');
+  }
+  document.getElementById('wl').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var body = { product: 'unbound-science', email: document.getElementById('email').value,
+      consent: document.getElementById('consent').checked,
+      website_extra: document.querySelector('[name=website_extra]').value,
+      landing_path: location.pathname };
+    utmFields.forEach(function (f) { body[f] = q.get(f); });
+    var refv = document.getElementById('ref').value; if (refv) body.referral_code = refv;
+    fetch('/api/waitlist', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) {
+        if (r.status === 200 && j.ok) setStatus('ok', j.message || 'Check your inbox.');
+        else if (r.status === 429) setStatus('err', 'Too many attempts — please slow down and try again later.');
+        else setStatus('err', 'Please check your email address and the consent box.');
+      }); })
+      .catch(function () { setStatus('err', 'Network error — please try again.'); });
+  });
+  document.getElementById('copybtn').addEventListener('click', function () {
+    var t = document.getElementById('sharelink').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(t);
+    sendEvent('referral_share');
+  });
+  sendEvent('waitlist_view');
+})();
+</script>
+</body>
+</html>

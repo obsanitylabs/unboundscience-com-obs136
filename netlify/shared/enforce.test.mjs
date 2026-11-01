@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateBatch, validateEvent, truncateIp, redactLogs, stripQuery, hostOnly,
+  validateBatch, validateEvent, truncateIp, redactLogs, stripQuery, hostOnly, makeBotFilter, ENUMS_OUT,
 } from './enforce.mjs';
 
 const ISO = new Date().toISOString();

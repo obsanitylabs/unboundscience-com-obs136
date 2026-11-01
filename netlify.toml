@@ -51,7 +51,49 @@
   to = "/admin/index.html"
   status = 200
 
+# OBS-203/OBS-577 — waitlist capture. The functions also declare these paths in
+# their own `config`, but pin the explicit rules here so publication does not
+# depend on the function-path resolution order. `/api/waitlist` must target the
+# `waitlist-submit` function (the previous target `/.netlify/functions/waitlist`
+# did not exist, so /api/waitlist 404'd).
 [[redirects]]
   from = "/api/waitlist"
-  to = "/.netlify/functions/waitlist"
+  to = "/.netlify/functions/waitlist-submit"
+  status = 200
+
+[[redirects]]
+  from = "/api/waitlist/confirm"
+  to = "/.netlify/functions/waitlist-confirm"
+  status = 200
+
+[[redirects]]
+  from = "/api/waitlist/unsubscribe"
+  to = "/.netlify/functions/waitlist-unsubscribe"
+  status = 200
+
+[[redirects]]
+  from = "/api/waitlist/event"
+  to = "/.netlify/functions/waitlist-event"
+  status = 200
+
+[[redirects]]
+  from = "/api/waitlist/stats"
+  to = "/.netlify/functions/waitlist-stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/waitlist/export"
+  to = "/.netlify/functions/waitlist-export"
+  status = 200
+
+[[redirects]]
+  from = "/api/waitlist/outbox"
+  to = "/.netlify/functions/waitlist-outbox"
+  status = 200
+
+# The waitlist page is a static file (public/waitlist/unbound-science/index.html).
+# Pin it explicitly so it is served rather than relying on directory-index order.
+[[redirects]]
+  from = "/waitlist/unbound-science/"
+  to = "/waitlist/unbound-science/index.html"
   status = 200

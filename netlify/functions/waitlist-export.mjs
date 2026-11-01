@@ -23,7 +23,9 @@ const handler = async (req, context) => {
     if (scope !== '*' && rec.product_key !== scope) continue;
     if (scope === '*' && want && rec.product_key !== want) continue;
     const status = rec.status === 'pending' && daysBetween(rec.created_at) > PENDING_TTL_DAYS ? 'expired' : rec.status;
-    rows.push(CSV_COLUMNS.map((c) => csvCell(c === 'status' ? status : rec[c])).join(','));
+    // OBS-631 v7: the `product` column must read rec.product_key — the record
+    // stores the product code under product_key, so rec['product'] was empty.
+    rows.push(CSV_COLUMNS.map((c) => csvCell(c === 'status' ? status : (c === 'product' ? rec.product_key : rec[c]))).join(','));
   }
 
   const clientIp = header(req, 'x-nf-client-connection-ip') || (header(req, 'x-forwarded-for') || '').split(',')[0] || 'unknown';

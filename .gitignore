@@ -8,3 +8,6 @@ vps-config.txt
 
 # Local Netlify folder
 .netlify
+
+# Acceptance-suite local store
+.tmp/
